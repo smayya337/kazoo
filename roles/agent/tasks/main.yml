@@ -1,0 +1,62 @@
+---
+- name: Add Wazuh key (dpkg)
+  copy:
+    src: ../../files/wazuh.gpg
+    dest: /usr/share/keyrings/wazuh.gpg
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: false
+  when: ansible_facts['os_family'] == 'Debian'
+- name: Add Wazuh key (rpm)
+  command: 'rpm --import https://packages.wazuh.com/key/GPG-KEY-WAZUH'
+  when: ansible_facts['os_family'] == 'RedHat'
+- name: Add Wazuh repository (apt)
+  apt_repository:
+    repo: 'deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main'
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+- name: Add Wazuh repository (dnf)
+  yum_repository:
+    name: wazuh
+    baseurl: 'https://packages.wazuh.com/4.x/yum/'
+    gpgcheck: true
+    gpgkey: 'https://packages.wazuh.com/key/GPG-KEY-WAZUH'
+    protect: true
+  when: ansible_facts['os_family'] == 'RedHat'
+- name: Download Wazuh agent (Windows)
+  ansible.windows.win_uri:
+    url: 'https://packages.wazuh.com/4.x/windows/wazuh-agent-4.7.0-1.msi'
+    dest: wazuh.msi
+  when: ansible_facts['os_family'] == 'Windows'
+- name: Install Wazuh agent (apt)
+  apt:
+    name: wazuh-agent
+    state: present
+    update_cache: yes
+  environment:
+    WAZUH_MANAGER: '{{ wazuh_manager_ip }}'
+  when: ansible_facts['os_family'] == 'Debian'
+- name: Install Wazuh agent (dnf)
+  dnf:
+    # If you are stuck with a custom repository, change `name`'s value to the URL of the RPM.
+    name: wazuh-agent
+    state: present
+  environment:
+    WAZUH_MANAGER: "{{ groups['manager'] | random }}"
+  when: ansible_facts['os_family'] == 'RedHat'
+- name: Download Wazuh agent (Windows)
+  command: ".\wazuh.msi /q WAZUH_MANAGER={{ groups['manager'] | random }}"
+  when: ansible_facts['os_family'] == 'Windows'
+- name: Enable and start wazuh-agent service (Linux)
+  systemd_service:
+    name: wazuh-agent
+    state: started
+    enabled: true
+  when: "ansible_facts['os_family'] == 'Debian' or ansible_facts['os_family'] == 'RedHat'"
+- name: Start Wazuh agent service (Windows)
+  ansible.windows.win_service:
+    name: Wazuh
+    start_mode: auto
+    state: started
+  when: ansible_facts['os_family'] == 'Windows'

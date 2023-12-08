@@ -1,0 +1,5 @@
+---
+- hosts: all
+  roles:
+    - role: agent
+      when: "'manager' not in group_names and 'fullserver' not in group_names"

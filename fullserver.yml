@@ -1,0 +1,6 @@
+---
+- hosts: fullserver
+  roles:
+    - role: indexer
+    - role: manager
+    - role: dashboard

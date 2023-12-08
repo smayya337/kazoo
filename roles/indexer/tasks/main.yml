@@ -1,0 +1,23 @@
+---
+- name: Copy install script
+  copy:
+    src: ../../files/wazuh-install.sh
+    dest: /root/wazuh-install.sh
+- name: Copy config files
+  copy:
+    src: ../../files/wazuh-install-files.tar
+    dest: /root/wazuh-install-files.tar
+- name: Install indexer
+  command: "bash /root/wazuh-install.sh --wazuh-indexer {{ node_id }} -o"
+- name: Start cluster
+  command: "bash /root/wazuh-install.sh --start-cluster"
+- name: Delete config files
+  file:
+    path: /root/wazuh-install-files.tar
+    state: absent
+  when: "'fullserver' not in group_names"
+- name: Delete install script
+  file:
+    path: /root/wazuh-install.sh
+    state: absent
+  when: "'fullserver' not in group_names"
